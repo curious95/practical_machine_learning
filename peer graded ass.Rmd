@@ -1,0 +1,190 @@
+---
+title: "Practical Machine Learning : Peer Graded Assingment"
+author: "kamal pradhan"
+date: "29 October 2016"
+output: 
+  html_document:
+     md_document:
+        variant: markdown_github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Human Activity Recognition
+
+##Synopsis
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+The goal of this project is to predict the manner in which they did the exercise.
+
+##Data
+
+The training data for this project are available here:
+
+[https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv)
+
+The test data are available here:
+
+[https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv)
+
+
+The data for this project come from this source: [http://groupware.les.inf.puc-rio.br/har](http://groupware.les.inf.puc-rio.br/har). If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.
+
+###Setting up the Environment
+This portion covers the loading of all libraries required for the project.
+```{r p_setup, warning=FALSE, results="hide", message=FALSE}
+#loading libraries
+library(ggplot2)
+library(dplyr)
+library(caret)
+library(reshape2)
+library(randomForest)
+```
+
+
+First we will download the ***training*** and ***testing*** dataset from the links provided above. 
+```{r g_data}
+train_url <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+test_url  <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+if(!file.exists("pml-training.csv") || !file.exists("pml-testing.csv")){
+  download.file(train_url,method = "curl",destfile = "pml-training.csv")
+  download.file(test_url,method = "curl",destfile = "pml-testing.csv")
+  downloadDate<- date()
+  
+  train_data<-read.csv("pml-training.csv",sep = ",",header = TRUE,na.strings = c("",NA))
+  test_data<-read.csv("pml-testing.csv",sep = ",",header = TRUE,na.strings = c("",NA))
+ 
+}else{
+  train_data<-read.csv("pml-training.csv",sep = ",",header = TRUE,na.strings = c("",NA))
+  test_data<-read.csv("pml-testing.csv",sep = ",",header = TRUE,na.strings = c("",NA))
+}
+
+```
+
+###Data Preparation
+
+As both the test and train data contains maximum rows empty columns.So we remove the columns where 50% of the rows are empty. we also remove variables such as username, timestamp e.t.c. which are not necessary.
+
+```{r d_prep}
+#Marking columns for removal
+rm_cols<-colnames(train_data[,colSums(is.na(train_data)) > nrow(train_data)*0.50])
+
+#Removing from training set
+train_data<-train_data[,!names(train_data) %in% rm_cols]
+
+#Removing from test set
+test_data<- test_data[,!names(test_data) %in% rm_cols]
+
+#Marking Unnecessary columns
+un_cols<- c("X", "user_name", "raw_timestamp_part_1", "raw_timestamp_part_2","cvtd_timestamp", "new_window", "num_window")
+
+#Removing Unnecessary columns from training set
+train_data<-train_data[,!names(train_data) %in% un_cols]
+
+#Removing Unnecessary columns from test set
+test_data<- test_data[,!names(test_data) %in% un_cols]
+
+#variables after removing unnecessary columns
+str(train_data)
+```
+
+###Data Exploration and Analysis
+
+Here we will explore the nature of the dataset and try to extract all the meaningful insights from it.
+
+```{r d_explor}
+#dimension of training and testing set
+dim(train_data)
+dim(test_data)
+
+#class variable factors
+table(train_data$classe)
+
+#correlation between variables(top 20)
+corrs<-cor(train_data[,-53])
+corrs[corrs==1]<-NA
+corrs[abs(corrs)<0.5]<-NA
+corrs<-na.omit(melt(corrs))
+corrs[order(-abs(corrs$value)),][1:20,]
+```
+
+These are some highly correlated variables.
+
+###Splittinng the Data before building the models
+For the computation and elimination of ***out of sample error*** we divide the training data set in 7:3 ratio for training and validation.
+
+```{r d_split}
+set.seed(3421) 
+
+#dividing data for training and validation
+temp_train <- createDataPartition(train_data$classe, p = 0.7, list = FALSE)
+train <- train_data[temp_train, ]
+valid <- train_data[-temp_train, ]
+```
+
+###Building and Evaluation of Training Models
+For the project i will use two models
+ 
+ * Decision tree model
+ * Random forest model
+ 
+Here we use, K=5, when doing k-fold cross validation since we are using non-linear models. This will help us to compare the accuracy of the models.
+```{r M_build, warning=FALSE, results="hide", message=FALSE}
+control <- trainControl(method = "cv", number = 5)
+
+#Decision Tree Model
+dtree_model <- train(
+  classe ~ ., 
+  data=train,
+  trControl=control,
+  method='rpart'
+)
+#Model Plot
+
+#Random Forest Model
+rforest_model <- train(
+  classe ~ ., 
+  data=train,
+  trControl=control,
+  method='rf',
+  ntree=100
+)
+
+
+```
+
+###Model Accuracy Comparision
+Confusion matrix is used to obtain all the details including accuracy of the model.
+```{r r_comp}
+#predicting using validation dataset and getting accuracy
+dtree_predict<-predict(dtree_model,valid)
+rforest_predict<-predict(rforest_model,valid)
+
+#confusion Matrix for decision tree
+d_mat<-confusionMatrix(dtree_predict,valid$classe)
+print(d_mat)
+
+#confusion Matrix for Random Forest
+rf_mat<-confusionMatrix(rforest_predict,valid$classe)
+print(rf_mat)
+
+#Accuracy of decision tree model
+d_mat$overall[1]
+
+#Accuracy of Random forest model
+rf_mat$overall[1]
+
+```
+
+###Predicting the Testing set
+Since Random Forest Model is Having more accuracy than the decision tree Model. We will use Random Forest Model for Predicting the testing set.
+```{r p_data}
+predict(rforest_model,test_data)
+```
+
+###Conclusion
+Based on the analysis we found that there are many variables with empty values in the data set. These variables were omitted in the analysis also these variables could have an impact if the variable could have sufficient data in the dataset. Through analysis we also found that random forest model have better accuracy than decision tree model in the above analysis.
