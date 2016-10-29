@@ -45,4 +45,14 @@ corrs<-cor(train_data[,-53])
 corrs[corrs==1]<-NA
 corrs[abs(corrs)<0.5]<-NA
 corrs<-na.omit(melt(corrs))
-corrs[order(-abs(corrs$value)),]
+corrs[order(-abs(corrs$value)),][1:20,]
+
+
+#cart
+Dtree_model <- train(
+  classe ~ ., 
+  data=training[, c('classe', nznames)],
+  trControl=fitControl,
+  method='rpart'
+)
+

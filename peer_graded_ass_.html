@@ -124,8 +124,7 @@ $(document).ready(function () {
 </div>
 
 
-<div id="human-activity-recognition" class="section level1">
-<h1>Human Activity Recognition</h1>
+<p><code>{r setup, include=FALSE} knitr::opts_chunk$set(echo = TRUE)</code></p>
 <div id="synopsis" class="section level2">
 <h2>Synopsis</h2>
 <p>Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.</p>
@@ -140,104 +139,61 @@ $(document).ready(function () {
 <p>The data for this project come from this source: <a href="http://groupware.les.inf.puc-rio.br/har" class="uri">http://groupware.les.inf.puc-rio.br/har</a>. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.</p>
 <div id="setting-up-the-environment" class="section level3">
 <h3>Setting up the Environment</h3>
-<p>This portion covers the loading of all libraries required for the project.</p>
-<pre class="r"><code>#loading libraries
-library(ggplot2)
-library(dplyr)
-library(caret)
-library(corrplot)
-library(reshape2)
-library(randomForest)</code></pre>
-<p>First we will download the <strong><em>training</em></strong> and <strong><em>testing</em></strong> dataset from the links provided above.</p>
-<pre class="r"><code>train_url &lt;- &quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv&quot;
-test_url  &lt;- &quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv&quot;
-
-if(!file.exists(&quot;pml-training.csv&quot;) || !file.exists(&quot;pml-testing.csv&quot;)){
-  download.file(train_url,method = &quot;curl&quot;,destfile = &quot;pml-training.csv&quot;)
-  download.file(test_url,method = &quot;curl&quot;,destfile = &quot;pml-testing.csv&quot;)
-  downloadDate&lt;- date()
-  
-  train_data&lt;-read.csv(&quot;pml-training.csv&quot;,sep = &quot;,&quot;,header = TRUE,na.strings = c(&quot;&quot;,NA))
-  test_data&lt;-read.csv(&quot;pml-testing.csv&quot;,sep = &quot;,&quot;,header = TRUE,na.strings = c(&quot;&quot;,NA))
- 
-}else{
-  train_data&lt;-read.csv(&quot;pml-training.csv&quot;,sep = &quot;,&quot;,header = TRUE,na.strings = c(&quot;&quot;,NA))
-  test_data&lt;-read.csv(&quot;pml-testing.csv&quot;,sep = &quot;,&quot;,header = TRUE,na.strings = c(&quot;&quot;,NA))
-}</code></pre>
+<p>This portion covers the loading of all libraries required for the project. <code>{r p_setup, warning=FALSE, results=&quot;hide&quot;, message=FALSE} #loading libraries library(ggplot2) library(dplyr) library(caret) library(corrplot) library(reshape2) library(randomForest)</code></p>
+<p>First we will download the <strong><em>training</em></strong> and <strong><em>testing</em></strong> dataset from the links provided above. ```{r g_data} train_url &lt;- “<a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv" class="uri">https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv</a>” test_url &lt;- “<a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv" class="uri">https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv</a>”</p>
+<p>if(!file.exists(“pml-training.csv”) || !file.exists(“pml-testing.csv”)){ download.file(train_url,method = “curl”,destfile = “pml-training.csv”) download.file(test_url,method = “curl”,destfile = “pml-testing.csv”) downloadDate&lt;- date()</p>
+<p>train_data&lt;-read.csv(“pml-training.csv”,sep = “,”,header = TRUE,na.strings = c(“”,NA)) test_data&lt;-read.csv(“pml-testing.csv”,sep = “,”,header = TRUE,na.strings = c(“”,NA))</p>
+<p>}else{ train_data&lt;-read.csv(“pml-training.csv”,sep = “,”,header = TRUE,na.strings = c(“”,NA)) test_data&lt;-read.csv(“pml-testing.csv”,sep = “,”,header = TRUE,na.strings = c(“”,NA)) }</p>
+<p>```</p>
 </div>
 <div id="data-preparation" class="section level3">
 <h3>Data Preparation</h3>
 <p>As both the test and train data contains maximum rows empty columns.So we remove the columns where 50% of the rows are empty. we also remove variables such as username, timestamp e.t.c. which are not necessary.</p>
-<pre class="r"><code>#Marking columns for removal
-rm_cols&lt;-colnames(train_data[,colSums(is.na(train_data)) &gt; nrow(train_data)*0.50])
-
-#Removing from training set
-train_data&lt;-train_data[,!names(train_data) %in% rm_cols]
-
-#Removing from test set
-test_data&lt;- test_data[,!names(test_data) %in% rm_cols]
-
-#Marking Unnecessary columns
-un_cols&lt;- c(&quot;X&quot;, &quot;user_name&quot;, &quot;raw_timestamp_part_1&quot;, &quot;raw_timestamp_part_2&quot;,&quot;cvtd_timestamp&quot;, &quot;new_window&quot;, &quot;num_window&quot;)
-
-#Removing Unnecessary columns from training set
-train_data&lt;-train_data[,!names(train_data) %in% un_cols]
-
-#Removing Unnecessary columns from test set
-test_data&lt;- test_data[,!names(test_data) %in% un_cols]</code></pre>
+<p>```{r d_prep} #Marking columns for removal rm_cols&lt;-colnames(train_data[,colSums(is.na(train_data)) &gt; nrow(train_data)*0.50])</p>
 </div>
+</div>
+<div id="removing-from-training-set" class="section level1">
+<h1>Removing from training set</h1>
+<p>train_data&lt;-train_data[,!names(train_data) %in% rm_cols]</p>
+</div>
+<div id="removing-from-test-set" class="section level1">
+<h1>Removing from test set</h1>
+<p>test_data&lt;- test_data[,!names(test_data) %in% rm_cols]</p>
+</div>
+<div id="marking-unnecessary-columns" class="section level1">
+<h1>Marking Unnecessary columns</h1>
+<p>un_cols&lt;- c(“X”, “user_name”, “raw_timestamp_part_1”, “raw_timestamp_part_2”,“cvtd_timestamp”, “new_window”, “num_window”)</p>
+</div>
+<div id="removing-unnecessary-columns-from-training-set" class="section level1">
+<h1>Removing Unnecessary columns from training set</h1>
+<p>train_data&lt;-train_data[,!names(train_data) %in% un_cols]</p>
+</div>
+<div id="removing-unnecessary-columns-from-test-set" class="section level1">
+<h1>Removing Unnecessary columns from test set</h1>
+<p>test_data&lt;- test_data[,!names(test_data) %in% un_cols] ```</p>
 <div id="data-exploration-and-analysis" class="section level3">
 <h3>Data Exploration and Analysis</h3>
 <p>Here we will explore the nature of the dataset and try to extract all the meaningful insights from it.</p>
-<pre class="r"><code>#dimension of training and testing set
-dim(train_data)</code></pre>
-<pre><code>## [1] 19622    53</code></pre>
-<pre class="r"><code>dim(test_data)</code></pre>
-<pre><code>## [1] 20 53</code></pre>
-<pre class="r"><code>#class variable factors
-table(train_data$classe)</code></pre>
-<pre><code>## 
-##    A    B    C    D    E 
-## 5580 3797 3422 3216 3607</code></pre>
-<pre class="r"><code>#correlation between variables(top 20)
-corrs&lt;-cor(train_data[,-53])
-corrs[corrs==1]&lt;-NA
-corrs[abs(corrs)&lt;0.5]&lt;-NA
-corrs&lt;-na.omit(melt(corrs))
-corrs[order(-abs(corrs$value)),][1:20,]</code></pre>
-<pre><code>##                  Var1             Var2      value
-## 10       accel_belt_z        roll_belt -0.9920085
-## 469         roll_belt     accel_belt_z -0.9920085
-## 4    total_accel_belt        roll_belt  0.9809241
-## 157         roll_belt total_accel_belt  0.9809241
-## 1593 gyros_dumbbell_z gyros_dumbbell_x -0.9789507
-## 1695 gyros_dumbbell_x gyros_dumbbell_z -0.9789507
-## 166      accel_belt_z total_accel_belt -0.9749317
-## 472  total_accel_belt     accel_belt_z -0.9749317
-## 60       accel_belt_x       pitch_belt -0.9657334
-## 366        pitch_belt     accel_belt_x -0.9657334
-## 426      accel_belt_z     accel_belt_y -0.9333854
-## 477      accel_belt_y     accel_belt_z -0.9333854
-## 1710  gyros_forearm_z gyros_dumbbell_z  0.9330422
-## 2373 gyros_dumbbell_z  gyros_forearm_z  0.9330422
-## 165      accel_belt_y total_accel_belt  0.9278069
-## 420  total_accel_belt     accel_belt_y  0.9278069
-## 9        accel_belt_y        roll_belt  0.9248983
-## 417         roll_belt     accel_belt_y  0.9248983
-## 903       gyros_arm_y      gyros_arm_x -0.9181821
-## 954       gyros_arm_x      gyros_arm_y -0.9181821</code></pre>
-<p>These are some highly correlated variables.</p>
+<p>```{r d_explor} #dimension of training and testing set dim(train_data) dim(test_data)</p>
 </div>
+</div>
+<div id="class-variable-factors" class="section level1">
+<h1>class variable factors</h1>
+<p>table(train_data$classe)</p>
+</div>
+<div id="correlation-between-variablestop-20" class="section level1">
+<h1>correlation between variables(top 20)</h1>
+<p>corrs&lt;-cor(train_data[,-53]) corrs[corrs==1]&lt;-NA corrs[abs(corrs)&lt;0.5]&lt;-NA corrs&lt;-na.omit(melt(corrs)) corrs[order(-abs(corrs$value)),][1:20,] ```</p>
+<p>These are some highly correlated variables.</p>
 <div id="splittinng-the-data-before-building-the-models" class="section level3">
 <h3>Splittinng the Data before building the models</h3>
 <p>For the comutation of out of sample error we divide the training data set in 7:3 ratio for training and validation.</p>
-<pre class="r"><code>set.seed(3421) 
-
-#dividing data for training and validation
-temp_train &lt;- createDataPartition(train_data$classe, p = 0.7, list = FALSE)
-train &lt;- train_data[temp_train, ]
-valid &lt;- train_data[-temp_train, ]</code></pre>
+<p>```{r d_split} set.seed(3421)</p>
 </div>
+</div>
+<div id="dividing-data-for-training-and-validation" class="section level1">
+<h1>dividing data for training and validation</h1>
+<p>temp_train &lt;- createDataPartition(train_data$classe, p = 0.7, list = FALSE) train &lt;- train_data[temp_train, ] valid &lt;- train_data[-temp_train, ] ```</p>
 <div id="building-and-evaluation-of-training-models" class="section level3">
 <h3>Building and Evaluation of Training Models</h3>
 <p>For the project i will use two models</p>
@@ -245,120 +201,45 @@ valid &lt;- train_data[-temp_train, ]</code></pre>
 <li>Decision tree model</li>
 <li>Random forest model</li>
 </ul>
-<p>Here we use, K=5, when doing k-fold cross validation since we are using non-linear models.</p>
-<pre class="r"><code>control &lt;- trainControl(method = &quot;cv&quot;, number = 5)
-
-#Decision Tree Model
-dtree_model &lt;- train(
-  classe ~ ., 
-  data=train,
-  trControl=control,
-  method='rpart'
-)
-
-#Random Forest Model
-rforest_model &lt;- train(
-  classe ~ ., 
-  data=train,
-  trControl=control,
-  method='rf',
-  ntree=100
-)</code></pre>
+<p>Here we use, K=5, when doing k-fold cross validation since we are using non-linear models. ```{r M_build, warning=FALSE, results=“hide”, message=FALSE} control &lt;- trainControl(method = “cv”, number = 5)</p>
 </div>
+</div>
+<div id="decision-tree-model" class="section level1">
+<h1>Decision Tree Model</h1>
+<p>dtree_model &lt;- train( classe ~ ., data=train, trControl=control, method=‘rpart’ )</p>
+</div>
+<div id="random-forest-model" class="section level1">
+<h1>Random Forest Model</h1>
+<p>rforest_model &lt;- train( classe ~ ., data=train, trControl=control, method=‘rf’, ntree=100 )</p>
+<p>```</p>
 <div id="model-accuracy-comparision" class="section level3">
 <h3>Model Accuracy Comparision</h3>
-<pre class="r"><code>#predicting using validation dataset and getting accuracy
-dtree_predict&lt;-predict(dtree_model,valid)
-rforest_predict&lt;-predict(rforest_model,valid)
-
-#confusion Matrix for decision tree
-d_mat&lt;-confusionMatrix(dtree_predict,valid$classe)
-print(d_mat)</code></pre>
-<pre><code>## Confusion Matrix and Statistics
-## 
-##           Reference
-## Prediction    A    B    C    D    E
-##          A 1080  193   28   58   19
-##          B  168  650   44  132  255
-##          C  310  233  807  516  248
-##          D  114   63  147  258   58
-##          E    2    0    0    0  502
-## 
-## Overall Statistics
-##                                          
-##                Accuracy : 0.5602         
-##                  95% CI : (0.5474, 0.573)
-##     No Information Rate : 0.2845         
-##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16      
-##                                          
-##                   Kappa : 0.4476         
-##  Mcnemar's Test P-Value : &lt; 2.2e-16      
-## 
-## Statistics by Class:
-## 
-##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity            0.6452   0.5707   0.7865  0.26763  0.46396
-## Specificity            0.9292   0.8738   0.7310  0.92237  0.99958
-## Pos Pred Value         0.7837   0.5204   0.3817  0.40312  0.99603
-## Neg Pred Value         0.8682   0.8945   0.9419  0.86540  0.89221
-## Prevalence             0.2845   0.1935   0.1743  0.16381  0.18386
-## Detection Rate         0.1835   0.1105   0.1371  0.04384  0.08530
-## Detection Prevalence   0.2342   0.2122   0.3592  0.10875  0.08564
-## Balanced Accuracy      0.7872   0.7222   0.7588  0.59500  0.73177</code></pre>
-<pre class="r"><code>#confusion Matrix for Random Forest
-rf_mat&lt;-confusionMatrix(rforest_predict,valid$classe)
-print(rf_mat)</code></pre>
-<pre><code>## Confusion Matrix and Statistics
-## 
-##           Reference
-## Prediction    A    B    C    D    E
-##          A 1673   11    0    0    0
-##          B    0 1128    3    1    0
-##          C    1    0 1022   10    3
-##          D    0    0    1  951    1
-##          E    0    0    0    2 1078
-## 
-## Overall Statistics
-##                                           
-##                Accuracy : 0.9944          
-##                  95% CI : (0.9921, 0.9961)
-##     No Information Rate : 0.2845          
-##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
-##                                           
-##                   Kappa : 0.9929          
-##  Mcnemar's Test P-Value : NA              
-## 
-## Statistics by Class:
-## 
-##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity            0.9994   0.9903   0.9961   0.9865   0.9963
-## Specificity            0.9974   0.9992   0.9971   0.9996   0.9996
-## Pos Pred Value         0.9935   0.9965   0.9865   0.9979   0.9981
-## Neg Pred Value         0.9998   0.9977   0.9992   0.9974   0.9992
-## Prevalence             0.2845   0.1935   0.1743   0.1638   0.1839
-## Detection Rate         0.2843   0.1917   0.1737   0.1616   0.1832
-## Detection Prevalence   0.2862   0.1924   0.1760   0.1619   0.1835
-## Balanced Accuracy      0.9984   0.9947   0.9966   0.9931   0.9979</code></pre>
-<pre class="r"><code>#Accuracy of decision tree model
-d_mat$overall[1]</code></pre>
-<pre><code>##  Accuracy 
-## 0.5602379</code></pre>
-<pre class="r"><code>#Accuracy of Random forest model
-rf_mat$overall[1]</code></pre>
-<pre><code>##  Accuracy 
-## 0.9943925</code></pre>
+<p>```{r r_comp} #predicting using validation dataset and getting accuracy dtree_predict&lt;-predict(dtree_model,valid) rforest_predict&lt;-predict(rforest_model,valid)</p>
 </div>
+</div>
+<div id="confusion-matrix-for-decision-tree" class="section level1">
+<h1>confusion Matrix for decision tree</h1>
+<p>d_mat&lt;-confusionMatrix(dtree_predict,valid$classe) print(d_mat)</p>
+</div>
+<div id="confusion-matrix-for-random-forest" class="section level1">
+<h1>confusion Matrix for Random Forest</h1>
+<p>rf_mat&lt;-confusionMatrix(rforest_predict,valid$classe) print(rf_mat)</p>
+</div>
+<div id="accuracy-of-decision-tree-model" class="section level1">
+<h1>Accuracy of decision tree model</h1>
+<p>d_mat$overall[1]</p>
+</div>
+<div id="accuracy-of-random-forest-model" class="section level1">
+<h1>Accuracy of Random forest model</h1>
+<p>rf_mat$overall[1]</p>
+<p>```</p>
 <div id="predicting-the-testing-set" class="section level3">
 <h3>Predicting the Testing set</h3>
-<p>Since Random Forest Model is Having more accuracy than the decision tree Model. We will use Random Forest Model for Predicting the testing set.</p>
-<pre class="r"><code>predict(rforest_model,test_data)</code></pre>
-<pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
-## Levels: A B C D E</code></pre>
+<p>Since Random Forest Model is Having more accuracy than the decision tree Model. We will use Random Forest Model for Predicting the testing set. <code>{r p_data} predict(rforest_model,test_data)</code></p>
 </div>
 <div id="conclusion" class="section level3">
 <h3>Conclusion</h3>
 <p>Based on the analysis we found that there are many variables with empty values in the data set. These variables were omitted in the analysis also these variables could have an impact if the variable could have sufficient data in the dataset. Through analysis we also found that random forest model have better accuracy than decision tree model in the above analysis.</p>
-</div>
 </div>
 </div>
 
